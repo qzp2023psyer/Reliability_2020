@@ -1,13 +1,15 @@
 data {
 	int N;      // # of subjects
-	int N_cond; // # of conditions
-	int N_time; // # of timepoints
-	int T_max;  // max # of trials across subjects
+	int N_cond; // # of conditions,c=1为一致条件
+	int N_time; // # of timepoints重测1 ，2
+	int T_max;  // max # of trials across subjects试次
 	int T_subj[N, N_cond, N_time];  // # of trials within subjects, conditions, timepoints
 	real RT[N, N_cond, N_time, T_max]; // Reaction times for each subject, condition, timepoint, and trial
 }
 parameters {
   // Group-level correlation matrix (cholesky factor for faster computation)
+  #重新参数化重测相关矩阵，并使多元正态分布的采样更加高效。
+  #Cholesky分解是一种将一个对称正定的矩阵分解为一个下三角矩阵和其转置的乘积的方法。
   cholesky_factor_corr[2] L_R_mu; 
   cholesky_factor_corr[2] L_R_sigma;
   
@@ -29,8 +31,10 @@ parameters {
   matrix[N,2] sigma_i_base_pr; 
 	matrix[2,N] sigma_i_delta_pr;
 }
+#将参数进行指数转化，防止负数
 transformed parameters {
   // Individual-level parameter off-sets (for non-centered parameterization)
+  #提高MCMC的采样效率
   matrix[2,N] mu_i_delta_tilde;
   matrix[2,N] sigma_i_delta_tilde;
   
@@ -39,6 +43,8 @@ transformed parameters {
   matrix[N,2] mu_i_delta;
   matrix[N,2] sigma_i_base;
   matrix[N,2] sigma_i_delta;
+
+  
   
   // Construct inidividual offsets (for non-centered parameterization)
   mu_i_delta_tilde = diag_pre_multiply(mu_sd_delta, L_R_mu) * mu_i_delta_pr;
@@ -55,6 +61,9 @@ transformed parameters {
     sigma_i_base[i,1] = sigma_mean_base[1] + sigma_sd_base[1] * sigma_i_base_pr[i,1];
     // Congruent at time 2
     sigma_i_base[i,2] = sigma_mean_base[2] + sigma_sd_base[2] * sigma_i_base_pr[i,2];
+    
+    #对应公式S16
+    
     
     // Condition effect on mu at time 1
     mu_i_delta[i,1] = mu_mean_delta[1] + mu_i_delta_tilde[1,i];
@@ -78,6 +87,8 @@ model {
   sigma_mean_base  ~ normal(0, 1);
   sigma_mean_delta ~ normal(0, 1); 
   
+  
+  #对应公式S16
   // Priors on group-level SDs
   mu_sd_base     ~ normal(0, 1);
   mu_sd_delta    ~ normal(0, 1);
@@ -132,6 +143,8 @@ generated quantities {
   }
   
   // Generate posterior predictions
+  #生成基于个体参数的预测反应时间，并计算这些预测与实际观察到的反应时间之间的对数似然值。
+#这些信息可以用于模型拟合的评估和模型比较。
   for (i in 1:N) {
     // Congruent at time 1
     for (t in 1:T_subj[i,1,1]) {
