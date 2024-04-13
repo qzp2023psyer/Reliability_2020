@@ -1,7 +1,4 @@
-install.packages("rstan")
-library(rstan)
-install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-set_cmdstan_path
+
 
 library(cmdstanr)
 
@@ -24,12 +21,7 @@ model_names <- c("normal", "lognormal", "shift_lognormal", "shift_lognormal_mix"
 data_names <- c("Study1-Flanker", "Study2-Flanker", "Study1-Stroop",
                 "Study2-Stroop", "Study3-Posner", "Study1a-IAT",
                 "Study2b-IAT")
-library(cmdstanr)
-install_cmdstan(
-  cores = 4,
-  release_file="C:/Users/Cesare/Documents/.cmdstan/cmdstan-2.34.1.tar.gz",
-  overwrite = T
-  )
+
 # Iterate through models and tasks
 results <- foreach(m=seq_along(model_names), .combine = "c") %do% {
   foreach(d=data_names, .combine = "c") %do% {
